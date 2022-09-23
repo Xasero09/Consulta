@@ -1,0 +1,89 @@
+--caso1
+SELECT
+    concat(concat(to_char(numrun,'09G999G999'),'-'),dvrun)"RUN CLIENTE",
+    trim(initcap(concat(concat(concat(concat(concat(concat(pnombre,' '),snombre),' '),appaterno),' '),apmaterno)))"NOMBRE DEL CLIENTE",
+    nombre_prof_ofic"PREOFESION/OFICIO",
+    to_char(fecha_nacimiento,'dd "de" month')"DIA DE CUMPLEAÑOS"
+FROM cliente NATURAL JOIN profesion_oficio
+WHERE EXTRACT(month from fecha_nacimiento)= EXTRACT(month from sysdate )+1 
+order by EXTRACT(day from fecha_nacimiento);
+
+--caso 2
+SELECT
+    to_char(numrun,'09g999g999')||'-'||dvrun"RUN CLIENTE",
+    UPPER(pnombre||' '||snombre||' '||appaterno||' '||apmaterno)"nombre cliente",
+    to_char(SUM(CC.MONTO_SOLICITADO),'L999G999G999')"MONTO SOLICITADO DE CREDITOS",
+     to_char((SUM(CC.MONTO_SOLICITADO)/100000)*1200,'L999G999G999')"TOTAL PESOS TODOSUMA"
+FROM CLIENTE c JOIN credito_cliente CC
+on c.nro_cliente = cc.nro_cliente
+where extract(year from cc.fecha_otorga_cred)= extract(year from sysdate)-1
+group by c.numrun,c.dvrun,c.pnombre,c.snombre,c.appaterno,c.apmaterno
+order by "TOTAL PESOS TODOSUMA",c.appaterno;
+
+
+SELECT
+    TO_CHAR(cc.fecha_otorga_cred,'mmyyyy')
+    "MES TRANSACCION",
+    cr.nombre_credito"TIPO CREDITO",
+    SUM(CC.MONTO_CREDITO)"MONTO SOLICITADO CREDITO",
+    CASE
+        WHEN SUM(CC.MONTO_CREDITO) BETWEEN 100000 AND 1000000
+            THEN SUM(CC.MONTO_CREDITO *0.01)
+        WHEN SUM(CC.MONTO_CREDITO) BETWEEN 1000001 AND 2000000
+            THEN SUM(CC.MONTO_CREDITO *0.02)
+        WHEN SUM(CC.MONTO_CREDITO) BETWEEN 2000001 AND 4000000
+            THEN SUM(CC.MONTO_CREDITO *0.03)
+        WHEN SUM(CC.MONTO_CREDITO) BETWEEN 4000001 AND 6000000
+            THEN SUM(CC.MONTO_CREDITO *0.04)
+        WHEN SUM(CC.MONTO_CREDITO) > 6000000
+            THEN SUM(CC.MONTO_CREDITO *0.07)
+    END "APORTE A LA SBIF"
+FROM credito_cliente cc JOIN credito cr
+ON CC.COD_CREDITO = CR.COD_CREDITO
+AND EXTRACT(YEAR FROM CC.FECHA_OTORGA_CRED) = EXTRACT(YEAR FROM SYSDATE)-1
+GROUP BY TO_CHAR(cc.fecha_otorga_cred,'mmyyyy'),cr.nombre_credito
+ORDER BY 1,2;
+
+
+SELECT
+    EXTRACT(YEAR FROM SYSDATE)"AÑO TRIBUTARIO",
+    UPPER(TO_CHAR(NUMRUN,'09G999G999')||'-'||DVRUN)"RUN CLIENTE",
+    INITCAP(PNOMBRE||' '||SUBSTR(c.snombre,1,1)||'. '||c.appaterno||' '||c.apmaterno)"NOMBRE CLIENTE",
+    COUNT(p.nro_solic_prod)"TOTAL PROD",
+    TO_CHAR(SUM(p.monto_total_ahorrado),'L999G999G999')"MONTO TOTAL AHORRADO"
+FROM CLIENTE C JOIN PRODUCTO_INVERSION_CLIENTE P
+ON C.NRO_CLIENTE  = P.NRO_CLIENTE
+WHERE p.cod_prod_inv BETWEEN 30 AND 55
+GROUP BY c.numrun,c.dvrun,c.pnombre,c.snombre,c.apmaterno,c.appaterno
+ORDER BY c.appaterno;
+
+
+SELECT
+    TO_CHAR(NUMRUN,'09G999G999')||'-'||UPPER(DVRUN)"RUN CLIENTE",
+    PNOMBRE||' '||SNOMBRE||' '||APPATERNO||' '||APMATERNO "NOMBRE CLIENTE",
+    TO_CHAR(SUM(PD.MONTO_TOTAL_AHORRADO),'L999G999G999') "MONTO TOTAL AHORRADO",
+CASE
+    WHEN SUM(PD.MONTO_TOTAL_AHORRADO) BETWEEN 100000 AND 1000000 THEN 'BRONCE'
+     WHEN SUM(PD.MONTO_TOTAL_AHORRADO) BETWEEN 1000001 AND 4000000 THEN 'PLATA'
+      WHEN SUM(PD.MONTO_TOTAL_AHORRADO) BETWEEN 4000001 AND 8000000 THEN 'SILVER'
+       WHEN SUM(PD.MONTO_TOTAL_AHORRADO) BETWEEN 8000001 AND 15000000 THEN 'GOLD'
+        WHEN SUM(PD.MONTO_TOTAL_AHORRADO) > 15000000 THEN 'PLATINUM'
+END "CATEGORIZACION CLIENTE"
+FROM CLIENTE C JOIN PRODUCTO_INVERSION_CLIENTE PD
+ON c.nro_cliente = pd.nro_cliente
+GROUP BY NUMRUN,DVRUN,PNOMBRE,SNOMBRE,APPATERNO,APMATERNO
+ORDER BY APPATERNO,SUM(PD.MONTO_TOTAL_AHORRADO) DESC;
+
+
+
+SELECT
+    NUMRUN||'-'||DVRUN,
+    PNOMBRE||' '||SNOMBRE||' '||APPATERNO||' '||APMATERNO "NOMBRE CLIENTE",
+    COUNT(cc.nro_solic_credito),
+    MAX(MONTO_CREDITO) ,
+    COD_CREDITO
+FROM CLIENTE C JOIN credito_cliente CC
+ON C.NRO_CLIENTE = cc.nro_cliente
+GROUP BY c.numrun,c.dvrun,c.apmaterno,c.appaterno,c.snombre,c.pnombre,COD_CREDITO
+ORDER BY c.appaterno
+--incompleto---
